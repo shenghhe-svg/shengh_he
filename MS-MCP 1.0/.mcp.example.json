@@ -1,0 +1,15 @@
+{
+  "mcpServers": {
+    "MS-MCP": {
+      "command": "node",
+      "args": [
+        "C:\\path\\to\\MS-MCP 1.0\\src\\index.js"
+      ],
+      "env": {
+        "MS_INSTALL_ROOT": "C:\\path\\to\\BIOVIA\\Materials Studio",
+        "MS_MCP_WORK_ROOT": "C:\\path\\to\\MS-MCP-Workspace",
+        "MS_MCP_STRUCTURE_SOURCE_POLICY": "auto"
+      }
+    }
+  }
+}
