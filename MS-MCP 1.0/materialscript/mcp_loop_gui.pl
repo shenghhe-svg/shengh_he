@@ -7,12 +7,7 @@ use MaterialsScript qw(:all);
 # Tools/User -> Script Library -> User Menu -> Start MS-MCP Loop
 # Run on = Client, Requires = Any document.
 
-my $script_dir = $0;
-$script_dir =~ s/[\\\/][^\\\/]+$//;
-my $repo_root = $script_dir;
-$repo_root =~ s/[\\\/]materialscript$//i;
-my $default_queue_root = "$repo_root\\workspace\\.mcp-queue";
-my $queue_root = $ENV{"MS_MCP_QUEUE_DIR"} || $default_queue_root;
+my $queue_root = $ENV{"MS_MCP_QUEUE_DIR"} || "C:\\MS-MCP-Workspace\\.mcp-queue";
 my $sleep_seconds = $ENV{"MS_MCP_LOOP_SLEEP"} || 2;
 
 my $pending = "$queue_root\\pending";

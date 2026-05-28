@@ -1,4 +1,4 @@
-﻿const $ = (id) => document.getElementById(id);
+const $ = (id) => document.getElementById(id);
 
 const canvas = $("structureCanvas");
 const ctx = canvas.getContext("2d");
@@ -48,23 +48,32 @@ function setDot(dot, state) {
 
 function shortPath(value) {
   if (!value) return "-";
-  return String(value).replace(/^C:\\path\\to\\MS-MCP 1.0\\?/i, "C:\\path\\to\\MS-MCP 1.0\\");
+  return String(value);
+}
+
+function escapeHtml(value) {
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
 }
 
 function renderStatus(data) {
   statusData = data;
   setDot($("mcpDot"), data.mcp?.connected ? "ok" : "bad");
-  $("mcpText").textContent = data.mcp?.connected ? "Connected to local MS-MCP" : "Not connected";
+  $("mcpText").textContent = data.mcp?.connected ? "已连接到本地 MS-MCP" : "未连接";
 
   setDot($("loopDot"), data.loop?.running ? "ok" : data.loop?.reason === "stop requested" ? "warn" : "bad");
-  $("loopText").textContent = data.loop?.running ? `Running: ${data.loop.reason}` : `Stopped: ${data.loop?.reason || "unknown"}`;
+  $("loopText").textContent = data.loop?.running ? `运行中：${data.loop.reason}` : `未运行：${data.loop?.reason || "unknown"}`;
 
-  $("docText").textContent = data.state?.currentDocument || "Not set";
+  $("docText").textContent = data.state?.currentDocument || "未设置";
   $("sessionText").textContent = data.config?.projectFolderName || "-";
   $("workspaceText").textContent = shortPath(data.config?.workRoot);
   $("projectRootText").textContent = shortPath(data.config?.projectRoot);
   $("stateFileText").textContent = shortPath(data.config?.stateFile);
   renderSessions(data.sessions || [], data.config?.projectFolderName);
+  renderXsdDocuments(data.xsdDocuments || [], data.state?.dashboardSelectedXsd || data.structure?.file);
 
   const queue = data.queue || {};
   for (const name of ["pending", "running", "done", "failed"]) {
@@ -75,7 +84,7 @@ function renderStatus(data) {
     .slice(-12);
   $("queueList").innerHTML = queueItems.length
     ? queueItems.map((item) => `<li><span class="pill">${item.name}</span> ${item.file}</li>`).join("")
-    : `<li>Queue is empty</li>`;
+    : `<li>队列为空</li>`;
 
   renderCalculations(data.calculations || []);
   renderStructure();
@@ -90,22 +99,41 @@ function renderCalculations(items) {
           <span class="pill">${item.module}</span>
           <div>
             <strong>${item.name}</strong>
-            <p class="viewer-hint">${item.files.length} files</p>
+            <p class="viewer-hint">${item.files.length} 个文件</p>
           </div>
           <span>${item.status}</span>
         </div>`,
         )
         .join("")
-    : `<p class="viewer-hint">No calculation folders in the current session</p>`;
+    : `<p class="viewer-hint">当前会话还没有计算文件夹</p>`;
 }
 
 function renderSessions(sessions, activeName) {
   const select = $("sessionSelect");
   const previous = select.value;
   select.innerHTML = sessions.length
-    ? sessions.map((item) => `<option value="${item.name}">${item.name}${item.active ? " current" : ""}</option>`).join("")
-    : `<option value="">No task sessions</option>`;
+    ? sessions.map((item) => `<option value="${item.name}">${item.name}${item.active ? " 当前" : ""}</option>`).join("")
+    : `<option value="">没有任务会话</option>`;
   select.value = sessions.some((item) => item.name === previous) ? previous : activeName || sessions[0]?.name || "";
+}
+
+function renderXsdDocuments(documents, selectedPath) {
+  const select = $("xsdSelect");
+  if (!select) return;
+  const previous = select.value;
+  select.innerHTML = documents.length
+    ? documents
+        .map((item) => `<option value="${escapeHtml(item.relativePath)}">${escapeHtml(item.relativePath)}</option>`)
+        .join("")
+    : `<option value="">No XSD files in this session</option>`;
+
+  const selected = documents.find((item) => selectedPath && item.path?.toLowerCase() === String(selectedPath).toLowerCase());
+  if (documents.some((item) => item.relativePath === previous)) {
+    select.value = previous;
+  } else {
+    select.value = selected?.relativePath || documents[0]?.relativePath || "";
+  }
+  $("switchXsdBtn").disabled = !documents.length;
 }
 
 function fitAtoms(atoms) {
@@ -261,7 +289,7 @@ function renderStructure() {
   drawBackdrop();
   const structure = statusData?.structure;
   if (!structure?.atoms?.length) {
-    $("viewerHint").textContent = "No readable XSD structure in the current session";
+    $("viewerHint").textContent = "当前会话没有可读取的 xsd 结构";
     ctx.fillStyle = "rgba(221,244,246,0.56)";
     ctx.font = "24px Segoe UI";
     ctx.textAlign = "center";
@@ -310,7 +338,7 @@ async function refresh() {
 async function postAndRefresh(path, body, message) {
   try {
     const result = await api(path, { method: "POST", body });
-    toast(message || result.queued || "Submitted");
+    toast(message || result.queued || "已提交");
     await refresh();
   } catch (error) {
     toast(error.message);
@@ -323,14 +351,19 @@ function setZoom(next) {
 }
 
 $("refreshBtn").addEventListener("click", refresh);
-$("stopLoopBtn").addEventListener("click", () => postAndRefresh("/api/loop/stop", {}, "Requested GUI loop stop"));
-$("newSessionBtn").addEventListener("click", () => postAndRefresh("/api/session/new", {}, "Created new task session"));
+$("stopLoopBtn").addEventListener("click", () => postAndRefresh("/api/loop/stop", {}, "已请求停止 GUI loop"));
+$("newSessionBtn").addEventListener("click", () => postAndRefresh("/api/session/new", {}, "已创建新任务会话"));
 $("switchSessionBtn").addEventListener("click", () => {
   const folderName = $("sessionSelect").value;
-  if (!folderName) return toast("No task session to switch to");
-  postAndRefresh("/api/session/select", { folderName }, `Switched to ${folderName}`);
+  if (!folderName) return toast("没有可切换的任务会话");
+  postAndRefresh("/api/session/select", { folderName }, `已切换到 ${folderName}`);
 });
-$("snapshotBtn").addEventListener("click", () => postAndRefresh("/api/structure/snapshot", {}, "Read current GUI structure"));
+$("switchXsdBtn").addEventListener("click", () => {
+  const relativePath = $("xsdSelect").value;
+  if (!relativePath) return toast("No XSD file selected");
+  postAndRefresh("/api/document/select", { relativePath }, `Previewing ${relativePath}`);
+});
+$("snapshotBtn").addEventListener("click", () => postAndRefresh("/api/structure/snapshot", {}, "已读取当前 GUI 结构"));
 $("resetViewBtn").addEventListener("click", () => {
   rotation = { x: -0.35, y: 0.6 };
   zoom = 1.8;
@@ -356,11 +389,11 @@ canvas.addEventListener("wheel", (event) => {
 }, { passive: false });
 
 for (const button of document.querySelectorAll("[data-model-action]")) {
-  button.addEventListener("click", () => postAndRefresh("/api/action/model", { action: button.dataset.modelAction }, "Queued modeling action"));
+  button.addEventListener("click", () => postAndRefresh("/api/action/model", { action: button.dataset.modelAction }, "建模操作已入队"));
 }
 
 for (const button of document.querySelectorAll("[data-calc-module]")) {
-  button.addEventListener("click", () => postAndRefresh("/api/action/calc", { module: button.dataset.calcModule }, "Queued calculation task"));
+  button.addEventListener("click", () => postAndRefresh("/api/action/calc", { module: button.dataset.calcModule }, "计算任务已入队"));
 }
 
 canvas.addEventListener("pointerdown", (event) => {
@@ -395,4 +428,3 @@ function animate() {
 refresh();
 setInterval(refresh, 5000);
 animate();
-

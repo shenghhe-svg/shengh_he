@@ -1,4 +1,4 @@
-﻿# MS-MCP GUI Dashboard
+# MS-MCP GUI Dashboard
 
 The dashboard is a lightweight local control panel for the MS-MCP workspace and GUI queue.
 It does not replace Materials Studio. It shows the active session, current document state,
@@ -7,7 +7,7 @@ queue status, calculation folders, and a simple structure preview.
 ## Start
 
 ```powershell
-cd C:\path\to\MS-MCP 1.0
+cd C:\Tools\MS-MCP 1.0
 npm run dashboard
 ```
 
@@ -30,4 +30,3 @@ http://127.0.0.1:4877
 - Broad `CalculateBonds` is refused for periodic documents from the dashboard.
 - Structure preview writes `dashboard_structure_snapshot.json`; it does not export another `.xsd`.
 - For robust structure creation, prefer the MCP tool `ms_gui_new_structure_current`.
-

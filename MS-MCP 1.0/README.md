@@ -1,4 +1,4 @@
-﻿# MS-MCP
+# MS-MCP
 
 External MCP server for BIOVIA Materials Studio. It lets Codex or any MCP client call Materials Studio through the supported MaterialsScript runtime (`RunMatScript.bat`) instead of fragile mouse automation.
 
@@ -38,7 +38,7 @@ This is an initial bridge layer. It exposes:
 MS-MCP includes a first-pass local dashboard under `GUI-Dashboard`. It monitors MCP/workspace state, GUI loop status, queues, current task session, current document, calculation folders, and a lightweight `.xsd` structure preview.
 
 ```powershell
-cd C:\path\to\MS-MCP 1.0
+cd C:\Tools\MS-MCP 1.0
 npm run dashboard
 ```
 
@@ -59,13 +59,13 @@ The dashboard can stop the GUI loop, start a new task session, queue basic model
 Default local install path used by this repo:
 
 ```powershell
-C:\path\to\BIOVIA\Materials Studio
+C:\Program Files\BIOVIA\Materials Studio
 ```
 
 ## Install
 
 ```powershell
-cd C:\path\to\MS-MCP 1.0
+cd C:\Tools\MS-MCP 1.0
 npm install
 npm run smoke
 ```
@@ -81,10 +81,10 @@ Add this server in Codex settings under MCP servers:
   "mcpServers": {
     "MS-MCP": {
       "command": "node",
-      "args": ["C:\\path\\to\\MS-MCP 1.0\\src\\index.js"],
+      "args": ["D:\\App\\MCP-MS\\src\\index.js"],
       "env": {
-        "MS_INSTALL_ROOT": "C:\\path\\to\\BIOVIA\\Materials Studio",
-        "MS_MCP_WORK_ROOT": "C:\\path\\to\\MS-MCP-Workspace",
+        "MS_INSTALL_ROOT": "D:\\App\\Materials Studio\\Materials Studio\\Materials Studio 23.1",
+        "MS_MCP_WORK_ROOT": "D:\\Work\\Work-Ph.D\\Experimental material\\DFT\\MS-MCP-Workspace",
         "MS_MCP_STRUCTURE_SOURCE_POLICY": "auto"
       }
     }
@@ -116,7 +116,7 @@ In Materials Studio:
 4. Set `Script` to:
 
 ```text
-C:\path\to\MS-MCP 1.0\materialscript\mcp_loop_gui.pl
+C:\Tools\MS-MCP 1.0\materialscript\mcp_loop_gui.pl
 ```
 
 5. Set `Run on` to `Client`.
@@ -126,7 +126,7 @@ C:\path\to\MS-MCP 1.0\materialscript\mcp_loop_gui.pl
 The GUI loop watches:
 
 ```text
-C:\path\to\MS-MCP 1.0\workspace\.mcp-queue
+C:\MS-MCP-Workspace\.mcp-queue
 ```
 
 Scripts consumed by this loop run in the GUI scripting context, so `Documents->New(...)` and `Documents->Import(...)` target the project that is open in Materials Studio.
@@ -136,7 +136,7 @@ Scripts consumed by this loop run in the GUI scripting context, so `Documents->N
 Use the `ms_gui_*` tools for normal interactive work. These tools maintain the current state file inside the active task/session folder:
 
 ```text
-C:\path\to\MS-MCP 1.0\workspace\YYYY-MM-DD-N\.ms-mcp-state.json
+C:\MS-MCP-Workspace\YYYY-MM-DD-N\.ms-mcp-state.json
 ```
 
 The state file records:
@@ -149,7 +149,7 @@ The state file records:
 MS-MCP keeps only the hidden queue/session pointer at the workspace root, and puts task outputs in a numbered session folder:
 
 ```text
-C:\path\to\MS-MCP 1.0\workspace
+C:\MS-MCP-Workspace
 |-- .mcp-queue
 |-- .ms-mcp-session.json
 |-- YYYY-MM-DD-1
@@ -172,7 +172,7 @@ $env:MS_MCP_PROJECT_FOLDER = "my-project-name"
 or point directly to a subfolder under the workspace:
 
 ```powershell
-$env:MS_MCP_PROJECT_ROOT = "C:\path\to\MS-MCP 1.0\workspace\2026-05-22-1"
+$env:MS_MCP_PROJECT_ROOT = "C:\MS-MCP-Workspace\2026-05-22-1"
 ```
 
 GUI document targeting is deliberately strict once `currentDocument` is set. When a later operation says "this molecule", MS-MCP tries to resolve the target by exact document key, `name.xsd`, name without `.xsd`, and the visible document name in the open GUI project. It does not silently fall back to the active window or the most recent 3D document when a named target is missing, because that can edit the wrong structure and create confusing duplicate `.xsd` files. After a GUI operation succeeds, the loop writes the runtime `$doc->Name` back into the session `.ms-mcp-state.json`.
@@ -235,7 +235,7 @@ Tools->CrystalBuilder->Build($doc)
 
 Coordinates can be supplied as fractional or Cartesian positions. Fractional coordinates are converted against the requested lattice before the CrystalBuilder build step. This keeps the GUI workflow close to manual Materials Studio use while avoiding extra `name (2).xsd` documents.
 
-For layered 2D crystals such as graphene, treat the first step as a real periodic crystal primitive cell, not as a finite molecule and not as a pre-named supercell. A graphene primitive cell should be built with a hexagonal in-plane lattice such as `a=b~2.46 A`, `gamma=120 degrees`, and two carbon atoms in fractional coordinates, for example `(1/3, 2/3, z)` and `(2/3, 1/3, z)`. Use `ms_gui_new_structure_current` once to create/import `graphene_primitive.xsd` or `graphene_unit_cell.xsd`, then expand the same current document with `ms_gui_make_supercell_current` using `a=n`, `b=m`, `c=1` for a monolayer. Do not create an initial document named `graphene_3x3x2.xsd` and then also run a `3,3,2` supercell, because that doubles the intended expansion semantics and makes the project state ambiguous.
+For layered 2D crystals such as graphene, treat the first step as a real periodic crystal primitive cell, not as a finite molecule and not as a pre-named supercell. A graphene primitive cell should be built with a hexagonal in-plane lattice such as `a=b≈2.46 Å`, `gamma=120°`, and two carbon atoms in fractional coordinates, for example `(1/3, 2/3, z)` and `(2/3, 1/3, z)`. Use `ms_gui_new_structure_current` once to create/import `graphene_primitive.xsd` or `graphene_unit_cell.xsd`, then expand the same current document with `ms_gui_make_supercell_current` using `a=n`, `b=m`, `c=1` for a monolayer. Do not create an initial document named `graphene_3x3x2.xsd` and then also run a `3,3,2` supercell, because that doubles the intended expansion semantics and makes the project state ambiguous.
 
 For periodic crystals and supercells, automatic bond calculation is disabled by default in MS-MCP. Materials Studio's general bond guessing can connect atoms incorrectly across periodic boundaries for 2D materials, especially after supercell expansion. If bonds are needed for display, use an explicit targeted bonding step or a material-specific builder rather than a broad `$doc->CalculateBonds` on the whole periodic supercell.
 
@@ -263,7 +263,7 @@ For GUI modeling workflows, keep `exportFile` omitted. Modeling operations then 
 Calculation workflows such as DMol3 and Forcite create a dedicated calculation folder under the active date folder. The folder name identifies the calculation; files inside the folder use simple module names so the Project Explorer stays close to a manual Materials Studio run. For example:
 
 ```text
-C:\path\to\MS-MCP 1.0\workspace\2026-05-21
+C:\MS-MCP-Workspace\2026-05-21
 `-- DMol3_Carbazole_COOH_Opt
     |-- DMol3_settings.json
     |-- DMol3_settings.txt
@@ -298,7 +298,7 @@ The current GUI-loop DMol3 path uses the MaterialsScript `Run()` API. That API r
 The GUI loop also writes a simple task log inside the active task/session folder. By default this is:
 
 ```text
-C:\path\to\MS-MCP 1.0\workspace\YYYY-MM-DD-N\gui_loop_status.txt
+C:\MS-MCP-Workspace\YYYY-MM-DD-N\gui_loop_status.txt
 ```
 
 The loop reads `.ms-mcp-session.json` beside `.mcp-queue`, so if Codex starts a new session while the GUI loop is already running, later loop status entries move to the new session folder automatically.
@@ -306,7 +306,7 @@ The loop reads `.ms-mcp-session.json` beside `.mcp-queue`, so if Codex starts a 
 To stop the loop, create this file:
 
 ```text
-C:\path\to\MS-MCP 1.0\workspace\.mcp-queue\stop
+C:\MS-MCP-Workspace\.mcp-queue\stop
 ```
 
 or close the running script.
@@ -316,7 +316,7 @@ For the closest-to-GUI behavior, enable queueing in the Codex MCP server environ
 ```json
 {
   "MS_MCP_ALLOW_ARBITRARY_SCRIPT": "1",
-  "MS_MCP_QUEUE_DIR": "C:\\path\\to\\MS-MCP 1.0\\workspace\\.mcp-queue"
+  "MS_MCP_QUEUE_DIR": "D:\\App\\MCP-MS\\workspace\\.mcp-queue"
 }
 ```
 
@@ -353,6 +353,3 @@ https://github.com/shengh_he/MS-MCP
 ## Notes on the GUI loop
 
 Materials Studio does not expose a native Python-like `mcp_loop()` function in the inspected installation. MS-MCP uses `materialscript/mcp_loop_gui.pl` as the single supported polling loop for an already-open Materials Studio GUI project.
-
-
-

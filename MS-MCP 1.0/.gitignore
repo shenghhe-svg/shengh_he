@@ -16,5 +16,3 @@ scripts/enqueue-*.js
 scripts/run-*.js
 scripts/loop-test.js
 scripts/probe-*.ps1
-
-.mcp.json

@@ -2,7 +2,7 @@
 setlocal
 if "%MS_INSTALL_ROOT%"=="" (
   echo Please set MS_INSTALL_ROOT to your BIOVIA Materials Studio install directory.
-  echo Example: set "MS_INSTALL_ROOT=C:\Program Files\BIOVIA\Materials Studio 2023"
+  echo Example: set "MS_INSTALL_ROOT=C:\Program Files\BIOVIA\Materials Studio"
   exit /b 1
 )
 set "MS_MCP_ROOT=%~dp0.."

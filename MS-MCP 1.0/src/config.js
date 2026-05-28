@@ -1,9 +1,9 @@
-﻿import fs from "node:fs";
+import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const DEFAULT_INSTALL_ROOT =
-  "C:\\path\\to\\BIOVIA\\Materials Studio";
+  "C:\\Program Files\\BIOVIA\\Materials Studio";
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
 function normalizePath(value) {
@@ -191,4 +191,3 @@ export function summarizeConfig(config) {
     runMatScriptExists: fs.existsSync(config.runMatScript),
   };
 }
-

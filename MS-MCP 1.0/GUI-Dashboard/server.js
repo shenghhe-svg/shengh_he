@@ -233,6 +233,22 @@ function findXsdFiles(root, maxDepth = 4) {
   return files;
 }
 
+function listXsdDocuments() {
+  if (!fs.existsSync(config.projectRoot)) return [];
+  return findXsdFiles(config.projectRoot)
+    .map((file) => {
+      const stat = fs.statSync(file);
+      return {
+        name: path.basename(file),
+        relativePath: path.relative(config.projectRoot, file),
+        path: file,
+        size: stat.size,
+        modifiedAt: stat.mtime.toISOString(),
+      };
+    })
+    .sort((a, b) => a.relativePath.localeCompare(b.relativePath));
+}
+
 function readStructureSnapshot() {
   const file = path.join(config.projectRoot, "dashboard_structure_snapshot.json");
   const snapshot = readJson(file);
@@ -249,6 +265,7 @@ function readStructureSnapshot() {
 
 function findStructureFile(state) {
   const candidates = [];
+  if (state.dashboardSelectedXsd) candidates.push(state.dashboardSelectedXsd);
   if (state.currentExport) candidates.push(state.currentExport);
   if (state.currentDocument) candidates.push(path.join(config.projectRoot, state.currentDocument));
   const xsdFiles = findXsdFiles(config.projectRoot);
@@ -267,6 +284,9 @@ function findStructureFile(state) {
 }
 
 function findStructureData(state) {
+  if (state.dashboardSelectedXsd && fs.existsSync(state.dashboardSelectedXsd)) {
+    return parseXsd(state.dashboardSelectedXsd);
+  }
   const snapshot = readStructureSnapshot();
   if (snapshot) return snapshot;
   const structureFile = findStructureFile(state);
@@ -411,6 +431,7 @@ async function api(req, res, url) {
       queue: listQueue(),
       loop: isLoopRunning(),
       sessions: listSessions(),
+      xsdDocuments: listXsdDocuments(),
       calculations: findCalculationFolders(),
       structure,
       mcp: { connected: true, reason: "Dashboard can read the MS-MCP workspace and queue." },
@@ -430,6 +451,20 @@ async function api(req, res, url) {
   if (req.method === "POST" && url.pathname === "/api/session/select") {
     const body = await bodyJson(req);
     return json(res, 200, switchSession(body.folderName));
+  }
+  if (req.method === "POST" && url.pathname === "/api/document/select") {
+    const body = await bodyJson(req);
+    const relativePath = String(body.relativePath || "");
+    if (!relativePath || !/\.xsd$/i.test(relativePath)) throw new Error("A session XSD file is required.");
+    const selected = assertInside(config.projectRoot, path.join(config.projectRoot, relativePath));
+    if (!fs.existsSync(selected) || !fs.statSync(selected).isFile()) {
+      throw new Error(`XSD file does not exist: ${relativePath}`);
+    }
+    writeState(config, {
+      dashboardSelectedXsd: selected,
+      lastJob: { type: "dashboard_select_xsd", relativePath, path: selected },
+    });
+    return json(res, 200, { ok: true, selected, relativePath });
   }
   if (req.method === "POST" && url.pathname === "/api/action/model") {
     const body = await bodyJson(req);
