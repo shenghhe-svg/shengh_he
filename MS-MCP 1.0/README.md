@@ -336,20 +336,6 @@ $env:MS_MCP_ALLOW_ARBITRARY_SCRIPT = "1"
 
 MaterialsScript itself can modify documents and submit calculations, so treat enabled arbitrary scripting like giving a local expert access to Materials Studio.
 
-## Publishing to GitHub
-
-Suggested repository name:
-
-```text
-MS-MCP
-```
-
-Suggested remote URL:
-
-```text
-https://github.com/shengh_he/MS-MCP
-```
-
 ## Notes on the GUI loop
 
 Materials Studio does not expose a native Python-like `mcp_loop()` function in the inspected installation. MS-MCP uses `materialscript/mcp_loop_gui.pl` as the single supported polling loop for an already-open Materials Studio GUI project.
